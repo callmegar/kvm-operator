@@ -343,39 +343,9 @@ coreos:
       Type=oneshot
       ExecStartPre=/bin/sh -c "while ! /usr/bin/docker run -e KUBECONFIG=${KUBECONFIG} --net=host --rm -v /etc/kubernetes:/etc/kubernetes $KUBECTL get no 2>/dev/null 1>/dev/null; do sleep 1 && echo 'Waiting for healthy k8s'; done"
       ExecStartPre=/bin/sh -c "sleep 2m"
-      ExecStart=/bin/sh -c "proxyCount=$(docker ps | grep 'kube-proxy' | wc -l);if [ "$proxyCount" == "0" ]; then sudo systemctl start k8s-proxy; fi;"
+      ExecStart=/bin/sh -c "proxyCount=$(docker ps | grep 'kube-proxy' | wc -l);if [ "$proxyCount" == "0" ]; then systemctl start k8s-proxy; fi;"
+      ExecStartPost=/bin/sh -c "Done."
       RemainAfterExit=yes
-
-  - name: node-exporter.service
-    enable: true
-    command: start
-    content: |
-      [Unit]
-      Description=Prometheus Node Exporter Service
-      Requires=docker.service
-      After=docker.service
-
-      [Service]
-      Restart=always
-      RestartSec=0
-      TimeoutStopSec=10
-      Environment="IMAGE=prom/node-exporter:0.12.0"
-      Environment="NAME=%p.service"
-      ExecStartPre=/usr/bin/docker pull $IMAGE
-      ExecStartPre=-/usr/bin/docker stop -t 10 $NAME
-      ExecStartPre=-/usr/bin/docker rm -f $NAME
-      ExecStart=/usr/bin/docker run --rm \
-        -p 91:91 \
-        --net=host \
-        --name $NAME \
-        $IMAGE \
-        --web.listen-address=:91
-      ExecStop=-/usr/bin/docker stop -t 10 $NAME
-      ExecStopPost=-/usr/bin/docker rm -f $NAME
-
-      [Install]
-      WantedBy=multi-user.target
-
   update:
     reboot-strategy: off
 
